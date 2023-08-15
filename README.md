@@ -36,8 +36,6 @@ A model to predict 30 days into the future of close values for the stock tickers
 - IBM
 - META
 
-</details> 
-
 
 <!-- ------------------------ -->
 ## Get US Stock Market data in Snowflake
