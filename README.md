@@ -2,9 +2,9 @@ Summary: Time Series Forecasting with Streamlit/Snowpark
 
 id: Forecasting-Stocks_streamlit
 
-tags: Getting Started, Data Science, Data Engineering, Modeling, Financial Services
+Tags: Getting Started, Data Science, Data Engineering, Modeling, Financial Services
 
-author: Nick McCuch
+Author: Nick McCuch
 
 # Time Series Forecasting with Streamlit/Snowpark
 <!-- ------------------------ -->
