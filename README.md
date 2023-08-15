@@ -1,6 +1,6 @@
 Summary: Time Series Forecasting with Streamlit/Snowpark
 
-id: Forecasting-price-streamlit-snowflake
+id: Forecasting-Stocks_streamlit
 
 tags: Getting Started, Data Science, Data Engineering, Modeling, Financial Services
 
