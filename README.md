@@ -47,7 +47,7 @@ Duration: 10
 ### Clone data from Snowflake's Data Marketplace
 1. Login to Snowflake > Open the Data Marketplace 
 2. Search for the 'Tick History' Dataset 
- ![tick history dataset](Screenshot 2023-07-24 at 12.20.36 PM.png)
+ ![tick history dataset](tickhistory.png)
 3. Select 'Get Data'. This user must have `ACCOUNTADMIN` privileges
 4. Assign a database name and roles for who should have access to this database
 5. Select Create Get > Query Data to get started
