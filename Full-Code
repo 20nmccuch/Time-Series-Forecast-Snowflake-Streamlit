@@ -1,0 +1,161 @@
+import streamlit as st
+import pandas as pd
+from snowflake.snowpark.context import get_active_session
+import statsmodels.api as sm
+from prophet import Prophet
+from prophet.diagnostics import cross_validation, performance_metrics
+import plotly.graph_objects as go  
+
+# Establish the Snowflake session
+session = get_active_session()
+
+# Function to load data for the selected tickers from the specified date range
+def load_data():
+    historical_data = session.table("AVG_LAST_PRICE")
+
+    historical_data = session.sql(f"SELECT * FROM avg_last_price WHERE ticker IN ('META','IBM') ORDER BY date;")
+
+    avg_price = historical_data.to_pandas()
+
+    # Parse the date to 'YYYY-MM-DD' format
+    avg_price['DATE'] = avg_price['DATE'].apply(parse_date)
+
+    return avg_price
+
+# Function to parse the integer date (YYMMDD) to 'YYYY-MM-DD' format
+def parse_date(date_int):
+    year = date_int // 10000
+    month = (date_int // 100) % 100
+    day = date_int % 100
+    return f'{year:04d}-{month:02d}-{day:02d}'
+
+# Add a header and introduction text
+st.title("📈 FORECASTING STOCK PRICES 📉")
+st.write("Welcome to the Stock Price Forecasting App! This interactive app allows you to analyze historical stock prices and forecast future stock prices using ARIMA and Prophet models.")
+
+try:
+    # Load data for the selected tickers
+    avg_price = load_data()
+
+    # Create a dropdown menu to select the stock ticker
+    ticker_mapping = {'META': 'Meta Ticker', 'IBM': 'IBM Ticker'}
+    selected_ticker = st.selectbox("Select Stock Ticker", list(ticker_mapping.keys()))
+
+    # Filter data based on the selected stock ticker
+    df_selected_ticker = avg_price[avg_price["TICKER"] == selected_ticker]
+
+    # Display historical data for the selected stock ticker in a table format
+    st.write(f"## Historical Data")
+    st.dataframe(df_selected_ticker)
+
+    # Prepare data for forecasting
+    df_selected_ticker.set_index('DATE', inplace=True)
+    y = df_selected_ticker['AVERAGE_LAST_PRICE']
+
+    # Fit ARIMA model
+    model = sm.tsa.ARIMA(y, order=(2, 1, 2))
+    results = model.fit()
+
+    # Make predictions for the next 30 days
+    period = 30
+    last_date = df_selected_ticker.index[-1]
+    future_dates = pd.date_range(start=pd.to_datetime(last_date) + pd.Timedelta(days=1), periods=period, freq='D')
+    forecast = results.forecast(steps=period)
+
+    # Display the forecasted prices as a table
+    st.write(f"## Forecasted Prices For the Next {period} Days")
+    forecast_df = pd.DataFrame({'Date': future_dates, 'Forecasted Prices': forecast})
+    st.dataframe(forecast_df)
+
+    # Display the forecasted prices using Plotly line chart
+    st.write(f"## Forecasted Prices Chart")
+    forecast_fig = go.Figure()
+    forecast_fig.add_trace(go.Scatter(x=df_selected_ticker.index, y=df_selected_ticker['AVERAGE_LAST_PRICE'], mode='lines', name='Historical Prices'))
+    forecast_fig.add_trace(go.Scatter(x=forecast_df['Date'], y=forecast_df['Forecasted Prices'], mode='lines', name='Forecasted Prices'))
+    forecast_fig.update_layout(title=f"Stock Prices for {ticker_mapping[selected_ticker]}", xaxis_title='Date', yaxis_title='Price')
+    st.plotly_chart(forecast_fig)
+
+    # Get the last known price and date from our stock dataset
+    num_rows_stock = df_selected_ticker.shape[0]
+    last_close_date = df_selected_ticker.index[-1]
+    last_close_value = df_selected_ticker['AVERAGE_LAST_PRICE'].iloc[-1]
+
+    # Get the prediction value and date from our forecasted trend
+    num_rows_forecast = forecast_df.shape[0]
+    last_forecast_date = forecast_df['Date'].iloc[-1]
+    last_forecast_value = forecast_df['Forecasted Prices'].iloc[-1]
+
+    # Display the projected change using Streamlit components
+    st.write(f"## Projected Change in Stock Price")
+    st.write(f"Last Known Close Price ({last_close_date}): ${last_close_value:.2f}")
+    st.write(f"Forecasted Target Price ({last_forecast_date}): ${last_forecast_value:.2f}")
+    st.write(f"Projected Change: ${last_forecast_value - last_close_value:.2f}")
+
+    # Cross-validation
+    df_selected_ticker.reset_index(inplace=True)
+    df_selected_ticker = df_selected_ticker.rename(columns={'DATE': 'ds', 'AVERAGE_LAST_PRICE': 'y'})
+
+    # Import prophet inside the try block to avoid conflicts
+    from prophet import Prophet
+    #initial='30 days': This parameter indicates the size of the initial training period for the first fold. In each subsequent fold, the 
+    #training data will include this initial period plus additional data from the previous fold.
+    #period='20 days': This parameter defines the spacing between the start of each training period. It specifies how far apart the folds are in terms of time.
+    #horizon='9 days': This parameter indicates the prediction horizon for each fold. The model will make predictions for this duration into the future.
+    m = Prophet()
+    m.fit(df_selected_ticker)
+    df_cv = cross_validation(m, initial='30 days', period='20 days', horizon='9 days', parallel="processes")
+
+    # Performance metrics
+    df_p = performance_metrics(df_cv)
+
+    # Sort the DataFrame by 'horizon' column in chronological order
+    df_p = df_p.sort_values(by='horizon')
+
+    # Display MAPE values during cross-validation using Streamlit line chart
+    st.write(f"## Mean Absolute Percentage Error (MAPE)")
+    st.write("In this section, we analyze the accuracy of our predictions using Mean Absolute Percentage Error (MAPE).")
+    st.line_chart(df_p.set_index('horizon')['mape'])  # Display MAPE as a line chart
+    st.write("The above graph shows the Mean Absolute Percentage Error (MAPE) for a sample of 9 days in line with our forecasted prices. The y-axis displays the MAPE in Percentage(.02-.1), and the x-axis displays the 9 day sample. The MAPE measures the accuracy of the model's predictions, lower MAPE values indicate more accurate predictions.")
+
+    # Get lowest MAPE value
+    lowest_mape = df_p['mape'].min()
+    st.write(f"Lowest MAPE value: {lowest_mape:.2f}")
+
+    # Hyperparameter tuning
+    #The provided code uses nested loops to iterate through different combinations of changepoint_prior_scale and seasonality_prior_scale values 
+    #from the specified grids (changepoint_grid and seasonality_grid). It fits a Prophet model with each combination 
+    #of hyperparameters and then evaluates the average Mean Absolute Percentage Error (MAPE) using cross-validation
+    changepoint_grid = [0.001, 0.01, 0.1, 0.5]
+    seasonality_grid = [0.01, 0.1, 1.0, 10.0]
+    period = '30 days'
+    horizon = '10 days'
+
+    best_mape = float('inf')
+    best_params = {}
+
+    for changepoint_prior_scale in changepoint_grid:
+        for seasonality_prior_scale in seasonality_grid:
+            m = Prophet(changepoint_prior_scale=changepoint_prior_scale, seasonality_prior_scale=seasonality_prior_scale)
+            m.fit(df_selected_ticker)
+            df_cv = cross_validation(m, initial=period, period=period, horizon=horizon)
+            df_p = performance_metrics(df_cv)
+            avg_mape = df_p['mape'].mean()
+
+            if avg_mape < best_mape:
+                best_mape = avg_mape
+                best_params['changepoint_prior_scale'] = changepoint_prior_scale
+                best_params['seasonality_prior_scale'] = seasonality_prior_scale
+
+    # Display the best hyperparameters
+    st.write(f"## Best Hyperparameters")
+    st.write("In this section, we explore the best hyperparameters for the Prophet model to optimize the forecast accuracy.")
+    st.write("Changepoint Prior Scale: Controls the flexibility of the trend. Smaller values make the trend more flexible.")
+    st.write("Seasonality Prior Scale: Controls the strength of the seasonality. Larger values allow more seasonal variations.")
+    st.write(best_params)
+
+    # Add conclusion
+    st.write("## Conclusion")
+    st.write("Thank you for using the Stock Price Forecasting App! You can analyze historical stock prices, forecast future prices, and evaluate the model's accuracy using MAPE. Happy forecasting!")
+
+except Exception as e:
+    st.error(f"Error: {e}")
