@@ -1,10 +1,15 @@
 Summary: Time Series Forecasting with Streamlit/Snowpark
+
 id: Forecasting-price-streamlit-snowflake
+
 categories: data-science-&-ml,partner-integrations
+
 environments: web
+
 status: Published
-feedback link: https://github.com/Snowflake-Labs/devlabs/issues
+
 tags: Getting Started, Data Science, Data Engineering, Modeling, Financial Services
+
 author: Nick McCuch
 
 # Time Series Forecasting with Streamlit/Snowpark
