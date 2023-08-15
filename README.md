@@ -31,9 +31,8 @@ In this guide, we'll be walking you through how to build a time series forecasti
 - *There are no downloads required for this guide!!*
 
 ### What You’ll Build 
-- A model to predict 30 days into the future of close values for the
-<summary>Stock Options</summary>
-
+- A model to predict 30 days into the future of close values for the stock tickers:
+  
 - IBM
 - META
 
