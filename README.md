@@ -122,7 +122,6 @@ This database needs to have `SELECT` privileges for a Role that your user has ac
  * rename "Forecasting Stock Prices"
  * choose created warehouse
  * choose database 'STREAMLIT_FORECAST_STOCKS' created earlier
-</br><img src="./assets/zepl_create_new_notebook.png" width="550" />
 
 ### Understanding Streamlit Options
 __Main Concepts:__ [Doc](https://docs.streamlit.io/library/get-started/main-concepts)
