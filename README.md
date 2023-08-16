@@ -10,6 +10,7 @@ Author: Nick McCuch
 <!-- ------------------------ -->
 ## Overview 
 Duration: 30
+
 Reference: I referenced a previous quick start Time Series Forecasting with Zepl as a guide. [Time series forecasting with Zepl ([https://quickstarts.snowflake.com/guide/time_series_forecasting_zepl/index.html?index=..%2F..index#7]) 
 
 In this guide, I'll be walking you through how to build a time series forecasting model using streamlits data science notebook with data loaded from Snowflake's Data Marketplace! We will be forecasting on stock market close values. _Please note:_ This walk through is not to be used for investing purposes. This is intended to be used as a guide to demonstrate an example of how to use Streamlit and Snowflake. 
