@@ -10,8 +10,9 @@ Author: Nick McCuch
 <!-- ------------------------ -->
 ## Overview 
 Duration: 30
+Reference: I referenced a previous quick start Time Series Forecasting with Zepl as a guide. [Time series forecasting with Zepl ([https://quickstarts.snowflake.com/guide/time_series_forecasting_zepl/index.html?index=..%2F..index#7]) 
 
-In this guide, we'll be walking you through how to build a time series forecasting model using streamlits data science notebook with data loaded from Snowflake's Data Marketplace! We will be forecasting on stock market close values. _Please note:_ This walk through is not to be used for investing purposes. This is intended to be used as a guide to demonstrate an example of how to use Streamlit and Snowflake.
+In this guide, I'll be walking you through how to build a time series forecasting model using streamlits data science notebook with data loaded from Snowflake's Data Marketplace! We will be forecasting on stock market close values. _Please note:_ This walk through is not to be used for investing purposes. This is intended to be used as a guide to demonstrate an example of how to use Streamlit and Snowflake. 
 
 ### Prerequisites
 - Familiarity with Python
@@ -154,6 +155,7 @@ from snowflake.snowpark.context import get_active_session
 import statsmodels.api as sm
 from prophet import Prophet
 from prophet.diagnostics import cross_validation, performance_metrics
+import plotly.graph_objects as go 
 ```
 
 #### Code Explained
@@ -185,7 +187,7 @@ __TL;DR:__ Predicting the future based on past events requires the past to have 
 
 ### Overview
 
-In this section we will explore the data for our selected stock tickers 'IBM' and 'META', build a time series forecast, and visualize the results. All of the code can be referenced here: [Notebook Code](https://app.zepl.com/viewer/notebooks/bm90ZTovL3pzaGFpbnNreUB6ZXBsLmNvbS8xZjNiMjQwZTFjZjQ0MDk4YTU0Njc1MDM3MTMwNThlZC9ub3RlLmpzb24/20210330-212709_1676214636). We will be using the statsmodel libray with Python for our analysis. 
+In this section we will explore the data for our selected stock tickers 'IBM' and 'META', build a time series forecast, and visualize the results. All of the code can be referenced in github under the Full-Code file. We will be using the statsmodel libray with Python for our analysis. 
 
 We will be looking at stock prices for International Business Machine Corp(IBM) and META. Using the statsmodels model, we will look at all of the last price values for both these stocks and determine if we can make stock trend predictions with a remotely accurate result. 
 
@@ -348,11 +350,20 @@ This line creates a new DataFrame called forecast_df. It is constructed using th
 `st.dataframe(forecast_df)`<br>
 This line uses the st.dataframe() function from Streamlit to display the DataFrame forecast_df in a tabular format on the Streamlit app. This table will show the dates and the corresponding forecasted prices for the selected stock ticker.
 
-`st.write(f"Plot of Average Price with Forecasted prices")`<br> 
-This line displays a text message using st.write() to inform the user that the following chart is a plot of the average price along with the forecasted prices.
+`forecast_fig = go.Figure()`<br> 
+This line initializes an empty Plotly figure object called forecast_fig
 
-`st.line_chart(pd.concat([df_selected_ticker['AVERAGE_LAST_PRICE'], forecast_df.set_index('Date')], axis=1))`<br> 
-This line uses the st.line_chart() function from Streamlit to display a line chart on the app. I
+`forecast_fig.add_trace(go.Scatter(x=df_selected_ticker.index, y=df_selected_ticker['AVERAGE_LAST_PRICE'], mode='lines', name='Historical Prices'))`<br> 
+This line adds a trace to the forecast_fig figure. This is a Scatter plot trace, which is used to create line plots.
+
+`forecast_fig.add_trace(go.Scatter(x=forecast_df['Date'], y=forecast_df['Forecasted Prices'], mode='lines', name='Forecasted Prices'))`<br> 
+This line is similar to the previous one, but it adds another trace for the forecasted prices. This sets the x-axis data to be the 'Date' column from the DataFrame forecast_df.
+
+`forecast_fig.update_layout(title=f"Stock Prices for {ticker_mapping[selected_ticker]}", xaxis_title='Date', yaxis_title='Price')`<br>
+This line updates the layout settings of the forecast_fig figure.
+
+`st.plotly_chart(forecast_fig)`<br> 
+This line displays the Plotly figure (forecast_fig) within the Streamlit app.
 ### Target Stock Price
 The code below will display the change in stock price between our forecast value and our last known stock value. 
 
